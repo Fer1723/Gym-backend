@@ -1,0 +1,93 @@
+package gym_system.com.mx.controller;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import gym.system.com.mx.dto.AbrirTurnoDTO;
+import gym.system.com.mx.dto.CerrarTurnoDTO;
+import gym_system.com.mx.entity.TurnoCaja;
+import gym_system.com.mx.service.TurnoCajaService;
+
+@RestController
+@RequestMapping("/api/turnos")
+public class TurnonCajaController {
+	@Autowired
+	private TurnoCajaService turnoCajaService;
+	
+	@GetMapping("/activo/{usuarioId}")
+	public ResponseEntity<?> verificarTurnoActivo(@PathVariable Integer usuarioId){
+		try {
+			Optional<TurnoCaja> turno = turnoCajaService.getTurnoActivo(usuarioId);
+            if (turno.isPresent()) {
+                return ResponseEntity.ok(turno.get());
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("mensaje", "No hay turno abierto para este usuario."));
+            }
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+		}
+	}
+	
+	@PostMapping("/abrir")
+    public ResponseEntity<?> abrirTurno(@RequestBody AbrirTurnoDTO request ) {
+        try {
+        	// ✅ CÁMBIALO POR ESTO:
+        	String observaciones = (request.getObservaciones() != null) ? request.getObservaciones() : "Apertura normal";
+        	TurnoCaja nuevoTurno = turnoCajaService.abrirTurno(request.getUsuarioId(), request.getEfectivoInicial(), observaciones);
+            return ResponseEntity.ok(nuevoTurno);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // 3. CERRAR TURNO
+    @PutMapping("/cerrar")
+    public ResponseEntity<?> cerrarTurno(@RequestBody CerrarTurnoDTO request) {
+        try {
+            TurnoCaja turnoCerrado = turnoCajaService.cerrarTurno(request.getTurnoId(), request.getEfectivoFinal());
+            return ResponseEntity.ok(turnoCerrado);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+    
+    @GetMapping("/ultimo-efectivo")
+	public ResponseEntity<Double> obtenerUltimoEfectivo(){
+		return ResponseEntity.ok(turnoCajaService.obtenerUltimoEfectivo());
+	}
+    
+    @GetMapping("/alertas")
+    public ResponseEntity<List<TurnoCaja>> obtenerAlertas() {
+        // Asegúrate de tener este método en tu TurnoCajaService como lo platicamos hace rato
+        return ResponseEntity.ok(turnoCajaService.obtenerAlertasAuditoria());
+    }
+    
+    @GetMapping("/resolver/{id}")
+    public ResponseEntity<?> resolverDiscrepancia(@PathVariable Long id, @RequestBody Map<String, Object> payload){
+    	try {
+			Double monto = Double.parseDouble(payload.get("montoRepuesto").toString());
+			String nota = payload.get("nota").toString();
+			
+			TurnoCaja turnoResuelto = turnoCajaService.resolverDiscrepancia(id, monto, nota);
+			return ResponseEntity.ok(turnoResuelto);
+		} catch (Exception e) {
+			return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+		}
+    }
+}

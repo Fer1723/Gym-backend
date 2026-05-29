@@ -1,0 +1,54 @@
+package gym_system.com.mx.service;
+
+import java.time.LocalDate;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import gym_system.com.mx.entity.CatalogoMembresia;
+import gym_system.com.mx.entity.Socio;
+import gym_system.com.mx.entity.Suscripcion;
+import gym_system.com.mx.repository.MembresiaRepository;
+import gym_system.com.mx.repository.SocioRepository;
+import gym_system.com.mx.repository.SuscripcionRepository;
+
+@Service
+public class SuscripcionService {
+	
+	@Autowired
+	private SuscripcionRepository suscripcionRepository;
+	
+	@Autowired
+	private SocioRepository socioRepository;
+	
+	@Autowired
+	private MembresiaRepository membresiaRepository;
+	
+	public List<Suscripcion> obtenerTodas(){
+		return suscripcionRepository.findAll();
+	}
+	
+	public Suscripcion inscribirSocio(Integer idSocio, Integer idMembresia) {
+		
+		Socio socio = socioRepository.findById(idSocio)
+				.orElseThrow(() -> new RuntimeException("Socio no encontrado"));
+		
+		CatalogoMembresia membresia = membresiaRepository.findById(idMembresia)
+				.orElseThrow(() -> new RuntimeException("Membresia no encontrada"));
+		
+		Suscripcion nuevaSuscripcion = new Suscripcion();
+		nuevaSuscripcion.setSocio(socio);
+		nuevaSuscripcion.setMembresia(membresia);
+		
+		LocalDate hoy = LocalDate.now();
+		nuevaSuscripcion.setFechaInicio(hoy);
+		
+		nuevaSuscripcion.setFechaFin(hoy.plusDays(membresia.getDuracionDias()));
+		
+		nuevaSuscripcion.setEstado("Activa");
+		
+		return suscripcionRepository.save(nuevaSuscripcion);
+		
+	}
+}

@@ -1,0 +1,5 @@
+package gym_system.com.mx.repository;
+
+public interface TurnoCajaRepository {
+
+}

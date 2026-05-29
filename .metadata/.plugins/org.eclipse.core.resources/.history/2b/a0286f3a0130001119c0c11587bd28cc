@@ -1,0 +1,25 @@
+package gym_system.com.mx.service;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import gym_system.com.mx.entity.CatalogoMembresia;
+import gym_system.com.mx.repository.MembresiaRepository;
+
+@Service
+public class MembresiaService {
+	
+	@Autowired
+	private MembresiaRepository membresiaRepository;
+	
+	public List<CatalogoMembresia> obtenerTodas(){
+		return membresiaRepository.findAll();
+	}
+	
+	public CatalogoMembresia guardarMembresia(CatalogoMembresia membresia) {
+		return membresiaRepository.save(membresia);
+	}
+
+}

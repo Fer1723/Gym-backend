@@ -1,0 +1,41 @@
+package gym_system.com.mx.entity;
+
+import java.math.BigDecimal;
+
+import jakarta.annotation.Generated;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "catalogo_membresias")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class CatalogoMembresia {
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@Column(name = "id_membresia")
+	private Integer idMembresia;
+	
+	@Column(name = "nombre", nullable = false, length = 100)
+	private String nombre;
+	
+	@Column(name = "precio", nullable = false, precision = 10, scale = 2)
+	private BigDecimal precio;
+	
+	@Column(name = "duracion_dias", nullable = false)
+	private Integer duracionDias;
+	
+	@Column(name = "descripcion", columnDefinition = "TEXT")
+	private String descripcion;
+	
+
+}

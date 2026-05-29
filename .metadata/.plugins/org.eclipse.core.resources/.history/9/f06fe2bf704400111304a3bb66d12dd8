@@ -1,0 +1,106 @@
+package gym_system.com.mx.service;
+
+import java.math.BigDecimal;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import gym_system.com.mx.entity.Producto;
+import gym_system.com.mx.entity.Venta;
+import gym_system.com.mx.entity.VentaTienda;
+import gym_system.com.mx.repository.ProductoRepository;
+import gym_system.com.mx.repository.VentaRepository;
+import gym_system.com.mx.repository.VentaTiendaRepository;
+import jakarta.transaction.TransactionScoped;
+import jakarta.transaction.Transactional;
+
+@Service
+public class ProductoService {
+	
+	@Autowired
+	private ProductoRepository productoRepository;
+	
+	@Autowired
+	private VentaRepository ventaRepository;
+	
+	@Autowired
+	private VentaTiendaRepository ventaTiendaRepository;
+	
+	public List<Producto> obtenerTodos(){
+		return productoRepository.findAll();
+	}
+	
+	public List<Producto> obtenerAlertasStock(){
+		return productoRepository.buscarProductosCriticos();
+	}
+	
+	public List<Venta> obtenerVentas(){
+		return ventaRepository.findAll();
+	}
+	
+	public Producto guardarProducto(Producto producto) {
+		return productoRepository.save(producto);
+	}
+	
+	@Transactional
+	public void venderProducto(Integer idProducto, Integer cantidadVendida) {
+		Producto producto = productoRepository.findById(idProducto)
+				.orElseThrow(() -> new RuntimeException("Error: Producto no encontrado"));
+		
+		if (producto.getStockActual() < cantidadVendida) {
+			throw new RuntimeException("¡Stock insuficiente! Solo queda " + producto.getStockActual() + " unidades de " + producto.getNombre());
+		}
+		
+		producto.setStockActual(producto.getStockActual() - cantidadVendida);;
+		productoRepository.save(producto);
+		
+		producto.setStockActual(producto.getStockActual() - cantidadVendida);
+		productoRepository.save(producto);
+		
+		Venta nuevaVenta = new Venta();
+		nuevaVenta.setNombreProducto(producto.getNombre());
+		nuevaVenta.setCantidad(cantidadVendida);
+		
+		BigDecimal totalCobrado = producto.getPrecioVenta().multiply(new BigDecimal(cantidadVendida));
+		nuevaVenta.setTotal(totalCobrado);
+		
+		ventaRepository.save(nuevaVenta);
+	}
+	
+	@Transactional
+	public void cobrarCarrito(VentaTienda ticket) {
+		for(gym_system.com.mx.entity.DetalleVenta detalle : ticket.getDetalle()) {
+			detalle.setVenta(ticket);
+			
+			Producto p = productoRepository.findById(detalle.getIdProducto())
+							.orElseThrow(() -> new RuntimeException("Error: Producto no encontrado"));
+			
+			if(p.getStockActual() < detalle.getCantidad()) {
+				throw new RuntimeException("¡Stock insuficiente! Solo quedan " + p.getStockActual() + " de " + p.getNombre());
+			}
+			
+			p.setStockActual(p.getStockActual() - detalle.getCantidad());
+			detalle.setNombreProducto(p.getNombre());
+			productoRepository.save(p);
+		}
+		
+		ticket.setFechaVenta(java.time.LocalDateTime.now());
+		
+		ventaTiendaRepository.save(ticket);
+	}
+	
+	@Transactional
+	public void rellenarStock(Integer id, Integer cantidad) {
+		Producto p= productoRepository.findById(id)
+				.orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+		
+		p.setStockActual(p.getStockActual() + cantidad);
+		productoRepository.save(p);
+	}
+	
+	@Transactional
+	public void eliminarProducto(Integer idProducto) {
+		productoRepository.deleteById(idProducto);
+	}
+}

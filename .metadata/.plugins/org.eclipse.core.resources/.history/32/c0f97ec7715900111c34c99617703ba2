@@ -1,0 +1,50 @@
+package gym_system.com.mx.controller;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import gym_system.com.mx.repository.LicenciaRepository;
+
+@RestController
+@RequestMapping("/api/licencia")
+public class LicenciaController {
+
+    private final ProductoController productoController;
+	@Autowired
+	private LicenciaRepository licenciaRepository;
+
+    LicenciaController(ProductoController productoController) {
+        this.productoController = productoController;
+    }
+	
+	@PostMapping("/validar")
+	public ResponseEntity<?> validarLicencia(@RequestBody Map<String, String> request){
+		String hardwareId = request.get("hardwareId");
+		Map<String, Object> response = new HashMap<>();
+		
+		if(hardwareId == null || hardwareId.isEmpty()) {
+			response.put("autotizado", false);
+			response.put("mensaje", "Huella de hardware ausente.");
+			return ResponseEntity.badRequest().body(response);
+		}
+		
+		boolean existeYActiva= licenciaRepository.findByyHradwareIdActivaTrue(hardwareId).isPresent();
+		
+		if(existeYActiva) {
+			response.put("autorizado", true);
+			response.put("mensaje", "Equipo autorizado para operar el sistema");
+			return ResponseEntity.ok(response);
+		}else {
+			response.put("autorizado", false);
+			response.put("mensaje", "🚨 ACCESO BLOQUEADO: Este equipo no cuenta con una licencia activa.");
+			return ResponseEntity.status(403).body(response);
+		}
+	}
+}

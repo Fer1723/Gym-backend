@@ -1,0 +1,33 @@
+package gym_system.com.mx.controller;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import gym.system.com.mx.dto.CorteCajaDTO;
+import gym_system.com.mx.service.CajaService;
+
+@RestController
+@RequestMapping("/api/caja")
+public class CajaController {
+	@Autowired
+	private CajaService cajaService;
+	
+	@GetMapping("/corte-hoy")
+	public ResponseEntity<CorteCajaDTO> obtenerCorteDelDia(){
+		return ResponseEntity.ok(cajaService.generarCorteDelDia());
+	}
+	
+	@GetMapping("/corte-turno/{turnoId}")
+	public ResponseEntity<?> obtenerCortePorTurno(@PathVariable Integer turnoId) {
+		try {
+			CorteCajaDTO corte = cajaService.generarCortePorTurno(turnoId);
+			return ResponseEntity.ok(corte);
+		} catch (Exception e) {
+			return ResponseEntity.badRequest().body("Error al generar corte de turno: " + e.getMessage());
+		}
+	}
+}

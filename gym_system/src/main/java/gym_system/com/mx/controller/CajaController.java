@@ -1,0 +1,62 @@
+package gym_system.com.mx.controller;
+
+import java.math.BigDecimal;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import gym.system.com.mx.dto.CorteCajaDTO;
+import gym_system.com.mx.service.CajaService;
+
+@CrossOrigin(origins = "http://localhost:4200") // 🛡️ Seguro adicional de CORS
+@RestController
+@RequestMapping("/api/caja")
+public class CajaController {
+	
+	@Autowired
+	private CajaService cajaService;
+	
+	@GetMapping("/corte-hoy")
+	public ResponseEntity<?> obtenerCorteDelDia(){
+		try {
+			CorteCajaDTO corte = cajaService.generarCorteDelDia();
+			return ResponseEntity.ok(corte);
+		} catch (Exception e) {
+			// 🚨 ESTO NOS DIRÁ LA VERDAD 🚨
+			System.out.println("🔥 ERROR REAL EN EL CORTE: " + e.getMessage());
+			e.printStackTrace(); 
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body("Error interno en el servidor: " + e.getMessage());
+		}
+	}
+	
+	@GetMapping("/corte-turno/{turnoId}")
+	public ResponseEntity<?> obtenerCortePorTurno(@PathVariable Integer turnoId) {
+		try {
+			CorteCajaDTO corte = cajaService.generarCortePorTurno(turnoId);
+			return ResponseEntity.ok(corte);
+		} catch (Exception e) {
+			System.out.println("🔥 ERROR REAL EN EL TURNO: " + e.getMessage());
+			e.printStackTrace();
+			return ResponseEntity.badRequest().body("Error al generar corte de turno: " + e.getMessage());
+		}
+	}
+	
+	@PutMapping("/cerrar-turno/{id}")
+	public ResponseEntity<?> cerrarTurno(@PathVariable("id") Long turnoId, @RequestParam BigDecimal efectivoFisico){
+		try {
+			cajaService.cerrarTurno(turnoId, efectivoFisico);
+			return ResponseEntity.ok().body("{\"mensaje\": \"Turno cerrado con éxito\"}");
+		} catch (Exception e) {
+			return ResponseEntity.internalServerError().body("Error al cerrar turno");
+		}
+	}
+}

@@ -1,0 +1,25 @@
+package gym_system.service.com.mx;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import gym_system.com.mx.GymSystemApplication;
+import gym_system.entity.com.mx.Socio;
+import gym_system.repository.com.mx.SocioRepository;
+
+@Service
+public class SocioService {
+
+	@Autowired
+	private SocioRepository socioRepository;
+
+	public List<Socio> obtenerTodos(){
+		return socioRepository.findAll();
+	}
+	
+	public Socio guardarSocio(Socio socio) {
+		return socioRepository.save(socio);
+	}
+	
+}

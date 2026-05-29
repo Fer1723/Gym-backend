@@ -1,0 +1,23 @@
+package gym_system.com.mx.controller;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import gym.system.com.mx.dto.CorteCajaDTO;
+import gym_system.com.mx.service.CajaService;
+
+@RestController
+@RequestMapping("/api/caja")
+public class CajaController {
+	@Autowired
+	private CajaService cajaService;
+	
+	@GetMapping("/corte-hoy")
+	public ResponseEntity<CorteCajaDTO> obtenerCorteDelDia(){
+		return ResponseEntity.ok(cajaService.generarCorteDelDia());
+	}
+
+}

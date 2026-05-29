@@ -1,0 +1,22 @@
+package gym_system.com.mx.controller;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import gym_system.com.mx.service.AccesoService;
+
+@RestController
+@RequestMapping("/api/accesos")
+public class AccesoController {
+	@Autowired
+	private AccesoService accesoService;
+	
+	@PostMapping("/verificar")
+	public boolean verificarAcceso(@RequestParam String huella) {
+		return accesoService.puedeEntrar(huella);
+	}
+
+}

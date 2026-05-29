@@ -1,0 +1,58 @@
+package gym_system.com.mx.service;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import gym_system.com.mx.entity.TurnoCaja;
+import gym_system.com.mx.entity.Usuario;
+import gym_system.com.mx.repository.TurnoCajaRepository;
+import gym_system.com.mx.repository.UsuarioRepository;
+
+@Service
+public class TurnoCajaService {
+	@Autowired
+	private TurnoCajaRepository turnoCajaRepository;
+	
+	@Autowired
+	private UsuarioRepository usuarioRepository;
+	
+	public Optional<TurnoCaja> getTurnoActivo(Integer usuarioId){
+		return turnoCajaRepository.findByUsuarioIdAndEstado(usuarioId, "ABIERTO");
+	}
+	
+	public TurnoCaja abrirTurno(Integer usuarioId, Double efectivoInicial) throws Exception{
+		Optional<TurnoCaja> turnoActivo = getTurnoActivo(usuarioId);
+		if(turnoActivo.isPresent()) {
+			throw new Exception("El usuario ya tiene un turno abierto. Debe cerrar antes de abrir uno nuevo.");
+		}
+		
+		Usuario usuario = usuarioRepository.findById(usuarioId)
+				.orElseThrow(() -> new Exception("Usuario no encontrado en el sistema"));
+		
+		TurnoCaja nuevoTurno = new TurnoCaja();
+        nuevoTurno.setUsuario(usuario);
+        nuevoTurno.setFechaApertura(LocalDateTime.now());
+        nuevoTurno.setEfectivoInicial(efectivoInicial);
+        nuevoTurno.setEstado("ABIERTO");
+
+        return turnoCajaRepository.save(nuevoTurno);
+	}
+	
+	public TurnoCaja cerrarTurno(Long turnoId, Double efectivoFinal) throws Exception{
+		TurnoCaja turno = turnoCajaRepository.findById(turnoId)
+                .orElseThrow(() -> new Exception("El turno no existe."));
+
+        if ("CERRADO".equals(turno.getEstado())) {
+            throw new Exception("Este turno ya fue cerrado previamente.");
+        }
+
+        turno.setFechaCierre(LocalDateTime.now());
+        turno.setEfectivoFinal(efectivoFinal);
+        turno.setEstado("CERRADO");
+
+        return turnoCajaRepository.save(turno);
+	}
+}

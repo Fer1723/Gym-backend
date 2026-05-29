@@ -1,0 +1,15 @@
+package gym_system.com.mx.repository;
+
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import gym_system.com.mx.entity.Visitas;
+
+@Repository
+public interface VisitaRepository extends JpaRepository<Visitas, Integer>{
+
+	Optional<Visitas> findByPinAndUsadoFalse(String pin);
+
+}

@@ -1,0 +1,5 @@
+package gym_system.com.mx.config;
+
+public class CorsConfig {
+
+}

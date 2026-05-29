@@ -1,0 +1,5 @@
+package gym_system.repository.com.mx;
+
+public interface SocioRepository {
+
+}

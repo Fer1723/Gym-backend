@@ -1,0 +1,42 @@
+package gym_system.com.mx.service;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import gym_system.com.mx.entity.Producto;
+import gym_system.com.mx.repository.ProductoRepository;
+import jakarta.transaction.Transactional;
+
+@Service
+public class ProductoService {
+	
+	@Autowired
+	private ProductoRepository productoRepository;
+	
+	public List<Producto> obtenerTodos(){
+		return productoRepository.findAll();
+	}
+	
+	public List<Producto> obtenerAlertasStock(){
+		return productoRepository.buscarProductosCriticos();
+	}
+	
+	public Producto guardarProducto(Producto producto) {
+		return productoRepository.save(producto);
+	}
+	
+	@Transactional
+	public void venderProducto(Integer idProducto, Integer cantidadVendida) {
+		Producto producto = productoRepository.findById(idProducto)
+				.orElseThrow(() -> new RuntimeException("Error: Producto no encontrado"));
+		if (producto.getStockActual() < cantidadVendida) {
+			throw new RuntimeException("¡Stock insuficiente! Solo queda " + producto.getStockActual() + " unidades de " + producto.getNombre());
+		}
+		
+		producto.setStockActual(producto.getStockActual() - cantidadVendida);;
+		productoRepository.save(producto);
+	}
+
+}

@@ -1,0 +1,12 @@
+spring.application.name=gym_system
+server.port=9091
+
+spring.datasource.url=jdbc:postgresql://localhost:5432/gym_management
+spring.datasource.username=postgres
+spring.datasorce.password=123
+
+spring.jpa.hibernate.ddl-auto=validate
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true 

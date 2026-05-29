@@ -1,0 +1,48 @@
+package gym_system.com.mx.entity;
+
+import java.time.LocalDateTime;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "turno_caja")
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class TurnoCaja {
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	
+	@ManyToOne
+	@JoinColumn(name = "usuario_id", nullable = false)
+	private Usuario usuario;
+	
+	@Column(name = "fecha_apertura", nullable = false)
+	private LocalDateTime fechaApertura;
+	
+	@Column(name = "fecha_cierre")
+	private LocalDateTime fechaCierre;
+	
+	@Column(name = "efectivo_inicial", nullable = false)
+	private Double efectivoInicial;
+	
+	@Column(name = "efectivo_final")
+	private Double efectivoFinal;
+	
+	@Column(name = "estado", nullable = false)
+	private String estado;
+	
+	@Column(columnDefinition = "TEXT")
+	private String observaciones;
+}

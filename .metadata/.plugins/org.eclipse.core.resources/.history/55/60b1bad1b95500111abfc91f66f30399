@@ -1,0 +1,5 @@
+package gym_system.com.mx.entity;
+
+public class FormaPago {
+
+}

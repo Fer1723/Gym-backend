@@ -1,0 +1,105 @@
+package gym_system.com.mx.service;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import gym_system.com.mx.entity.CatalogoMembresia;
+import gym_system.com.mx.entity.Pago;
+import gym_system.com.mx.entity.Socio;
+import gym_system.com.mx.entity.Suscripcion;
+import gym_system.com.mx.repository.MembresiaRepository;
+import gym_system.com.mx.repository.PagoRepository;
+import gym_system.com.mx.repository.SocioRepository;
+import gym_system.com.mx.repository.SuscripcionRepository;
+import jakarta.transaction.Transactional;
+
+@Service
+public class SuscripcionService {
+	
+	@Autowired
+	private SuscripcionRepository suscripcionRepository;
+	
+	@Autowired
+	private SocioRepository socioRepository;
+	
+	@Autowired
+	private MembresiaRepository membresiaRepository;
+	
+	@Autowired
+	private PagoRepository pagoRepository;
+	
+	public List<Suscripcion> obtenerTodas(){
+		return suscripcionRepository.findByEstado("ACTIVA");
+	}
+	
+	@Transactional
+	public Suscripcion inscribirSocio(Integer idSocio, Integer idMembresia) {
+		
+		Socio socio = socioRepository.findById(idSocio)
+				.orElseThrow(() -> new RuntimeException("Socio no encontrado"));
+		
+		CatalogoMembresia membresia = membresiaRepository.findById(idMembresia)
+				.orElseThrow(() -> new RuntimeException("Membresia no encontrada"));
+		
+		List<Suscripcion> activas = suscripcionRepository.findBySocioAndEstado(socio, "Activa");
+		
+		LocalDate fechaInicioNueva;
+		
+		if(!activas.isEmpty()) {
+			LocalDate ultimaFechaFin = activas.stream()
+					.map(Suscripcion::getFechaFin)
+					.max(LocalDate::compareTo)
+					.get();
+			fechaInicioNueva = ultimaFechaFin;
+		}else {
+			fechaInicioNueva = LocalDate.now();
+		}
+		
+		Suscripcion nueva = new Suscripcion();
+		nueva.setSocio(socio);
+		nueva.setMembresia(membresia);
+		nueva.setFechaInicio(fechaInicioNueva);
+		
+		if(membresia.getDuracionDias() == 30) {
+			nueva.setFechaFin(fechaInicioNueva.plusMonths(1));
+		}else if(membresia.getDuracionDias() == 365) {
+			nueva.setFechaFin(fechaInicioNueva .plusYears(1));
+		}else{
+			nueva.setFechaFin(fechaInicioNueva.plusDays(membresia.getDuracionDias()));
+		}
+		
+		nueva.setEstado("Activa");
+		Suscripcion guardada = suscripcionRepository.save(nueva);
+		
+		Pago pago = new Pago();
+		pago.setSuscripcion(guardada);
+		pago.setMonto(membresia.getPrecio());
+		pago.setFechaPago(LocalDateTime.now());
+		pago.setMetodoPago(metodoPago);
+		pagoRepository.save(pago);
+		
+		
+		return guardada;
+		
+	}
+	
+	public Suscripcion actualizarSuscripcion(Integer id, Suscripcion suscripcionActualizada) {
+		return suscripcionRepository.findById(id).map(suscripcion ->{
+			suscripcion.setFechaInicio(suscripcionActualizada.getFechaInicio());
+			suscripcion.setFechaFin(suscripcionActualizada.getFechaFin());
+			suscripcion.setEstado(suscripcionActualizada.getEstado());
+			return suscripcionRepository.save(suscripcion);
+		}).orElseThrow(() -> new RuntimeException("Suscripcion no encontrada"));
+	}
+	
+	public void cancelarSuscripcion(Integer id) {
+		Suscripcion suscripcion = suscripcionRepository.findById(id)
+				.orElseThrow(() -> new RuntimeException("Suscripcion no encontrada"));
+		suscripcion.setEstado("CANCELADA");
+		suscripcionRepository.save(suscripcion);
+	}
+}
