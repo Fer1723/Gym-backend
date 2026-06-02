@@ -1,0 +1,23 @@
+package gym_system.com.mx.repository;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import gym_system.com.mx.entity.Pago;
+
+public interface PagoRepository extends JpaRepository<Pago, Integer> {
+	List<Pago> findByFechaPagoBetween(java.time.LocalDateTime inicio, java.time.LocalDateTime fin);
+	List<Pago> findByTurnoCaja_Id(Long turnoId);
+	
+	//Consultas Locales (Para Recepcionista - Turno Actual)
+	@Query("SELECT COALESCE(SUM(p.monto), 0) FROM Pago p WHERE p.metodoPago = :metodo AND p.turnoCaja.id = :turnoId")
+	Double sumarPorMetodoYTurno(@Param("metodo") String metodo, @Param("turnoId") Long turnoId);
+	
+	//Consulta Global (Para el Admin - Todo el día
+	@Query("SELECT COALESCE(SUM(p.monto), 0) FROM Pago p WHERE p.metodoPago = :metodo AND p.fechaPago >= :inicioDia AND p.fechaPago <= :finDia")
+	Double sumarGlobalPorMetodoYFecha(@Param("metodo") String metodo, @Param("inicioDia") LocalDateTime inicioDia, @Param("finDia") LocalDateTime finDia);
+}

@@ -1,0 +1,37 @@
+package gym_system.com.mx.repository;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import gym_system.com.mx.entity.Visitas;
+
+@Repository
+public interface VisitaRepository extends JpaRepository<Visitas, Integer>{
+
+	Optional<Visitas> findByPinAndUsadoFalse(String pin);
+	
+	@Query("SELECT COALESCE(SUM(v.monto), 0) FROM Visitas v WHERE v.fechaCreacion >= :inicio AND v.fechaCreacion <= :fin")
+    Double sumarIngresosPorFecha(@Param("inicio") LocalDateTime inicio, @Param("fin") LocalDateTime fin);
+	
+	@Query("SELECT COUNT(v) FROM Visitas v WHERE v.fechaCreacion >= :inicio AND v.fechaCreacion <= :fin")
+    Long contarVisitasPorFecha(@Param("inicio") LocalDateTime inicio, @Param("fin") LocalDateTime fin);
+	
+	// Consulta Local (Para la recepcionista - Turno actual)
+	@Query("SELECT COALESCE(SUM(v.monto), 0) FROM Visitas v WHERE v.metodoPago = :metodo AND v.turnoCaja.id = :turnoId")
+	Double sumarPorMetodoYTurno(@Param("metodo") String metodo, @Param("turnoId") Long turnoId);
+
+	// Consulta Global (Para el Admin - Todo el día)
+	@Query("SELECT COALESCE(SUM(v.monto), 0) FROM Visitas v WHERE v.metodoPago = :metodo AND v.fechaCreacion >= :inicioDia AND v.fechaCreacion <= :finDia")
+	Double sumarGlobalPorMetodoYFecha(@Param("metodo") String metodo, @Param("inicioDia") LocalDateTime inicioDia, @Param("finDia") LocalDateTime finDia);
+	
+	
+	
+	List<Visitas> findByFechaCreacionBetween(java.time.LocalDateTime inicio, java.time.LocalDateTime fin);
+	List<Visitas> findByTurnoCaja_Id(Long turnoId);
+}

@@ -47,6 +47,9 @@ public class Socio {
 	@Column(name = "fecha_registro", updatable = false)
 	private LocalDateTime fechaRegistro;
 	
+	@Column(name = "dado_de_baja_por")
+	private String dadoDeBajaPor;
+	
 	
 	@PrePersist
 	protected void OnCreate() {

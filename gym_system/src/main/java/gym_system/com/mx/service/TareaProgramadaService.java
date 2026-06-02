@@ -4,6 +4,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -17,10 +19,20 @@ public class TareaProgramadaService {
 	@Autowired
 	private SuscripcionRepository suscripcionRepository;
 	
-	@Scheduled(cron = "0 0 0 * * ?")
+	@Scheduled(cron = "0 30 22 * * ?")
 	@Transactional
-	public void actualizarVencimientos() {
-		System.out.println("🦉 Velador Nocturno despertando: Buscando planes vencidos...");
+	public void actualizarVencimientosNocturnos() {
+		System.out.println("🦉 Velador Nocturno despertando (10:30 PM): Buscando planes vencidos...");
+		ejecutarLimpieza();
+	}
+	
+	@EventListener(ApplicationReadyEvent.class)
+	@Transactional
+	public void actualizarVencimientosAlEncender() {
+		System.out.println("🌅 Sistema Iniciado: Verificando membresías que vencieron mientras el sistema estaba apagado...");
+		ejecutarLimpieza();
+	}
+	public void ejecutarLimpieza() {
 		LocalDate hoy = LocalDate.now();
 		
 		// 🚨 Así es más rápido: La base de datos hace el filtro, no la memoria RAM

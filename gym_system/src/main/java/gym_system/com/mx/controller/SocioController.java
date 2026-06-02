@@ -7,7 +7,6 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,8 +16,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
 import gym_system.com.mx.entity.Socio;
-import gym_system.com.mx.repository.SocioRepository;
 import gym_system.com.mx.service.SocioService;
 import jakarta.validation.Valid;
 
@@ -26,43 +25,33 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/socios")
 public class SocioController {
 
-    private final SocioRepository socioRepository;
-
+	// 🧹 Limpiamos el llamado directo al Repository. El Controller solo debe hablar con el Service.
 	@Autowired
 	private SocioService socioService;
-
-    SocioController(SocioRepository socioRepository) {
-        this.socioRepository = socioRepository;
-    }
 	
-    @GetMapping
-    public ResponseEntity<List<Socio>> obtenerTodos() {
-    	List<Socio> listaCompleta = socioService.obtenerTodos();
-        
-        // 🚨 EL CHIVATO: Va a imprimir en la consola negra de Spring Boot (Eclipse/IntelliJ)
-        System.out.println("🚨 ALERTA DETECTIVE: Java extrajo " + listaCompleta.size() + " socios de la base de datos.");
-        
-        return ResponseEntity.ok(listaCompleta);
-    }
-    
-    @GetMapping("/activos")
-    public ResponseEntity<List<Socio>> obtenerSoloActivos() {
-        return ResponseEntity.ok(socioService.obtenerSoloActivos());
-    }
+	@GetMapping
+	public ResponseEntity<List<Socio>> obtenerTodos() {
+		List<Socio> listaCompleta = socioService.obtenerTodos();
+		
+		// 🚨 EL CHIVATO: Va a imprimir en la consola negra de Spring Boot (Eclipse/IntelliJ)
+		System.out.println("🚨 ALERTA DETECTIVE: Java extrajo " + listaCompleta.size() + " socios de la base de datos.");
+		
+		return ResponseEntity.ok(listaCompleta);
+	}
+	
+	@GetMapping("/activos")
+	public ResponseEntity<List<Socio>> obtenerSoloActivos() {
+		return ResponseEntity.ok(socioService.obtenerSoloActivos());
+	}
 	
 	@PostMapping
-	private Socio registrarSocio(@Valid @RequestBody Socio socio) {
-		return socioService.guardarSocio(socio);
+	public ResponseEntity<Socio> registrarSocio(@Valid @RequestBody Socio socio) {
+		return ResponseEntity.ok(socioService.guardarSocio(socio));
 	}
 	
 	@PutMapping("/{id}")
-	private Socio actualizarSocio(@PathVariable Integer id, @RequestBody Socio socio){
-		return socioService.actualizarSocio(id, socio);
-	}
-	
-	@DeleteMapping("/{id}")
-	private void eliminarSocio(@PathVariable Integer id) {
-		socioService.eliminarSocio(id);
+	public ResponseEntity<Socio> actualizarSocio(@PathVariable Integer id, @RequestBody Socio socio){
+		return ResponseEntity.ok(socioService.actualizarSocio(id, socio));
 	}
 	
 	@GetMapping("/{id}")
@@ -71,26 +60,25 @@ public class SocioController {
 		
 		if(socio.isPresent()) {
 			return ResponseEntity.ok(socio.get());
-		}else {
-			return  ResponseEntity.notFound().build();		}
+		} else {
+			return ResponseEntity.notFound().build();
+		}
 	}
 	
+	// 🛡️ EL ÚNICO PUNTO DE ACCESO PARA BAJAS Y REINCORPORACIONES
 	@PatchMapping("/{id}/estado")
-    public ResponseEntity<Map<String, String>> actualizarEstado(@PathVariable Integer id, @RequestParam boolean estado) {
-        Map<String, String> respuesta = new HashMap<>();
-        try {
-            Socio socio = socioRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Socio no encontrado"));
-            
-            socio.setEstado(estado);
-            socioRepository.save(socio);
-            
-            respuesta.put("mensaje", "Estado actualizado correctamente");
-            return ResponseEntity.ok(respuesta); // Ahora sí es un JSON 100% real
-            
-        } catch (Exception e) {
-            respuesta.put("error", "No se pudo actualizar: " + e.getMessage());
-            return ResponseEntity.badRequest().body(respuesta);
-        }
-    }
+	public ResponseEntity<Map<String, String>> actualizarEstado(@PathVariable Integer id, @RequestParam boolean estado) {
+		Map<String, String> respuesta = new HashMap<>();
+		try {
+			// 🔐 Aquí está la magia: Llamamos al SERVICE, el cual ejecutará tu lógica de auditoría
+			socioService.actualizarEstado(id, estado);
+			
+			respuesta.put("mensaje", "Estado actualizado correctamente");
+			return ResponseEntity.ok(respuesta);
+			
+		} catch (Exception e) {
+			respuesta.put("error", "No se pudo actualizar: " + e.getMessage());
+			return ResponseEntity.badRequest().body(respuesta);
+		}
+	}
 }

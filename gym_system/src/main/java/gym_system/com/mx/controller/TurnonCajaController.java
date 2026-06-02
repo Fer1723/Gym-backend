@@ -74,7 +74,6 @@ public class TurnonCajaController {
     
     @GetMapping("/alertas")
     public ResponseEntity<List<TurnoCaja>> obtenerAlertas() {
-        // Asegúrate de tener este método en tu TurnoCajaService como lo platicamos hace rato
         return ResponseEntity.ok(turnoCajaService.obtenerAlertasAuditoria());
     }
     

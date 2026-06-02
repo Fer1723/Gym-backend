@@ -8,6 +8,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import gym_system.com.mx.entity.CatalogoMembresia;
@@ -47,7 +48,7 @@ public class SuscripcionService {
 	}
 	
 	@Transactional
-public Suscripcion inscribirSocio(Integer idSocio, Integer idMembresia, String metodoPago, boolean aplicaInscripcion, String fechaFinManual) {
+	public Suscripcion inscribirSocio(Integer idSocio, Integer idMembresia, String metodoPago, boolean aplicaInscripcion, String fechaFinManual) {
 		
 		Socio socio = socioRepository.findById(idSocio)
 				.orElseThrow(() -> new RuntimeException("Socio no encontrado"));
@@ -95,6 +96,16 @@ public Suscripcion inscribirSocio(Integer idSocio, Integer idMembresia, String m
 
 			// 2. Apilar fechas y aplicar descuentos
 			List<Suscripcion> activas = suscripcionRepository.findBySocioAndEstado(socio, "ACTIVA");
+			if(aplicaInscripcion && !activas.isEmpty()) {
+				for (Suscripcion sub : activas) {
+					sub.setEstado("CANCELADA");
+					sub.setCanceladaPor("SISTEMA_REINCORPORACION");
+					sub.setFechaCancelacion(LocalDateTime.now());
+				}
+				suscripcionRepository.saveAll(activas);
+				activas.clear();
+				System.out.println("♻️ Se cancelaron los planes viejos del socio para iniciar su reincorporación limpia.");
+			}
 			if(!activas.isEmpty()) {
 				LocalDate ultimaFechaFin = activas.stream()
 						.map(Suscripcion::getFechaFin)
@@ -191,6 +202,13 @@ public Suscripcion inscribirSocio(Integer idSocio, Integer idMembresia, String m
 		Suscripcion suscripcion = suscripcionRepository.findById(id)
 				.orElseThrow(() -> new RuntimeException("Suscripcion no encontrada"));
 		suscripcion.setEstado("CANCELADA");
+		
+		String usuarioLogueado = SecurityContextHolder.getContext().getAuthentication().getName();
+		suscripcion.setCanceladaPor(usuarioLogueado);
+		suscripcion.setFechaCancelacion(LocalDateTime.now());
+		
 		suscripcionRepository.save(suscripcion);
+		
+		System.out.println("⚠️ ALERTA: Suscripción " + id + " cancelada manualmente por el usuario: " + usuarioLogueado);
 	}
 }

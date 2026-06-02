@@ -35,14 +35,18 @@ public class TurnoCajaService {
 				.orElseThrow(() -> new Exception("Usuario no encontrado en el sistema"));
 		
 		TurnoCaja nuevoTurno = new TurnoCaja();
-        nuevoTurno.setUsuario(usuario);
-        nuevoTurno.setFechaApertura(LocalDateTime.now());
-        nuevoTurno.setEfectivoInicial(efectivoInicial);
-        nuevoTurno.setEstado("ABIERTO");
-        
-        nuevoTurno.setObservaciones(observaciones);
+		nuevoTurno.setUsuario(usuario);
+		nuevoTurno.setFechaApertura(LocalDateTime.now());
+		nuevoTurno.setEfectivoInicial(efectivoInicial);
+		nuevoTurno.setEstado("ABIERTO");
+		
+		// 🛡️ BLINDAJE 1: Si viene nulo o vacío, le ponemos un valor limpio por defecto.
+		String obsSegura = (observaciones == null || observaciones.trim().isEmpty()) 
+				? "Apertura sin observaciones" 
+				: observaciones;
+		nuevoTurno.setObservaciones(obsSegura);
 
-        return turnoCajaRepository.save(nuevoTurno);
+		return turnoCajaRepository.save(nuevoTurno);
 	}
 	
 	public TurnoCaja cerrarTurno(Long turnoId, Double efectivoFinal) throws Exception{
@@ -83,25 +87,23 @@ public class TurnoCajaService {
 						.toList();
 	}
 	
-public TurnoCaja resolverDiscrepancia(Long turnoId, Double montoRepuesto, String notaResolucion) throws Exception {
+	public TurnoCaja resolverDiscrepancia(Long turnoId, Double montoRepuesto, String notaResolucion) throws Exception {
 		
 		// 1. Buscamos el turno que tiene el problema (el turno viejo)
 		TurnoCaja turnoViejo = turnoCajaRepository.findById(turnoId)
 				.orElseThrow(() -> new Exception("Turno no encontrado"));
 		
-		// 2. Le ponemos el sello de resuelto para limpiar el historial 
-        // (Pero NO le movemos el dinero, el pasado se queda como evidencia)
-		String nuevaObservacion = turnoViejo.getObservaciones() + " | [RESUELTO]: " + notaResolucion;
+		// 🛡️ BLINDAJE: Extraemos de forma segura para evitar la palabra "null"
+		String obsAnterior = turnoViejo.getObservaciones() == null ? "Sin observaciones" : turnoViejo.getObservaciones();
+		String notaSegura = (notaResolucion == null || notaResolucion.trim().isEmpty()) ? "Ajuste validado por administración" : notaResolucion;
+		
+		// 2. Le ponemos el sello de resuelto para limpiar el historial
+		// (Pero NO le movemos el dinero, el pasado se queda como evidencia)
+		String nuevaObservacion = obsAnterior + " | [RESUELTO]: " + notaSegura;
 		turnoViejo.setObservaciones(nuevaObservacion);
-		turnoCajaRepository.save(turnoViejo);
 		
-		// 3. Si se entregó dinero físico, se lo inyectamos al turno ACTIVO (El del dueño en este momento)
-		if (montoRepuesto > 0) {
-			TurnoCaja turnoActivo = getTurnoActivoDelUsuarioLogueado();
-			turnoActivo.setEfectivoInicial(turnoActivo.getEfectivoInicial() + montoRepuesto);
-			turnoCajaRepository.save(turnoActivo);
-		}
+		// 🗑️ ELIMINAMOS LA INYECCIÓN DE DINERO (El sistema ya tiene registradas esas ventas, sumarlo otra vez lo duplicaría)
 		
-		return turnoViejo;
+		return turnoCajaRepository.save(turnoViejo);
 	}
 }

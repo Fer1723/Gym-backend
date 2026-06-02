@@ -24,7 +24,7 @@ public class Visitas {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Integer id;
 	
-	@Column(unique = true, length = 6)
+	@Column(unique = true, length = 15)
 	private String pin;
 	
 	private Double monto;

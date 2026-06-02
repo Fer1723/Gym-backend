@@ -1,0 +1,204 @@
+package gym_system.com.mx.service;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+
+import gym_system.com.mx.entity.CatalogoMembresia;
+import gym_system.com.mx.entity.Pago;
+import gym_system.com.mx.entity.Socio;
+import gym_system.com.mx.entity.Suscripcion;
+import gym_system.com.mx.repository.MembresiaRepository;
+import gym_system.com.mx.repository.PagoRepository;
+import gym_system.com.mx.repository.SocioRepository;
+import gym_system.com.mx.repository.SuscripcionRepository;
+import jakarta.transaction.Transactional;
+
+@Service
+public class SuscripcionService {
+	
+	@Autowired
+	private SuscripcionRepository suscripcionRepository;
+	
+	@Autowired
+	private SocioRepository socioRepository;
+	
+	@Autowired
+	private MembresiaRepository membresiaRepository;
+	
+	@Autowired
+	private PagoRepository pagoRepository;
+	
+	@Autowired
+	private TurnoCajaService turnoCajaService;
+	
+	public List<Suscripcion> obtenerTodas(){
+		return suscripcionRepository.findByEstado("ACTIVA");
+	}
+	
+	public List<Suscripcion> buscarPorIdSocio(Integer idSocio){
+		return suscripcionRepository.findBySocioIdSocio(idSocio);
+	}
+	
+	@Transactional
+public Suscripcion inscribirSocio(Integer idSocio, Integer idMembresia, String metodoPago, boolean aplicaInscripcion, String fechaFinManual) {
+		
+		Socio socio = socioRepository.findById(idSocio)
+				.orElseThrow(() -> new RuntimeException("Socio no encontrado"));
+		
+		CatalogoMembresia membresia = membresiaRepository.findById(idMembresia)
+				.orElseThrow(() -> new RuntimeException("Membresia no encontrada"));
+	
+		LocalDate hoy = LocalDate.now();
+		
+		// 🚨 DETECTAMOS SI ES MIGRACIÓN 🚨
+		boolean esMigracion = (fechaFinManual != null && !fechaFinManual.trim().isEmpty());
+
+		LocalDate fechaInicioNueva;
+		LocalDate fechaFinNueva;
+		BigDecimal montoAPagar;
+		String metodoPagoFinal = metodoPago;
+
+		if (esMigracion) {
+			// ==========================================
+			// CAMINO 1: MIGRACIÓN DEL SISTEMA VIEJO
+			// ==========================================
+			fechaInicioNueva = hoy; 
+			fechaFinNueva = LocalDate.parse(fechaFinManual); // Usamos la fecha que mandó Angular
+			montoAPagar = BigDecimal.ZERO;                   // Costo 0 para no inflar la caja
+			metodoPagoFinal = "MIGRACION_SISTEMA_ANTERIOR";  // Etiqueta contable
+			
+		} else {
+			// ==========================================
+			// CAMINO 2: TU LÓGICA MAESTRA (Cobro Normal)
+			// ==========================================
+			montoAPagar = membresia.getPrecio();
+			
+			// 1. Validar inactividad > 30 días
+			List<Suscripcion> historial = suscripcionRepository.findBySocioOrderByFechaFinDesc(socio);
+			if(!historial.isEmpty()) {
+				Suscripcion ultima = historial.get(0);
+				if(ultima.getEstado().equals("VENCIDA")) {
+					long diasInactivo = ChronoUnit.DAYS.between(ultima.getFechaFin(), hoy);
+					if(diasInactivo > 30 && !membresia.getNombre().equalsIgnoreCase("RE-INSCRIPCION")) {
+						throw new RuntimeException("El socio tiene mas de un mes inactivo (" + diasInactivo + " dias). "+
+													"Debe pagar una Re-inscripcion obligatoria.");
+					}
+				}
+			}
+
+			// 2. Apilar fechas y aplicar descuentos
+			List<Suscripcion> activas = suscripcionRepository.findBySocioAndEstado(socio, "ACTIVA");
+			if(!activas.isEmpty()) {
+				LocalDate ultimaFechaFin = activas.stream()
+						.map(Suscripcion::getFechaFin)
+						.max(LocalDate::compareTo)
+						.get();
+				fechaInicioNueva = ultimaFechaFin;
+				
+				if((ultimaFechaFin.isEqual(hoy) || ultimaFechaFin.isAfter(hoy)) && (membresia.getDuracionDias() >= 28)){
+					BigDecimal descuento ;
+					String nombrePlan = membresia.getNombre().toUpperCase();
+					if(nombrePlan.contains("MUJER")) {
+						descuento = new BigDecimal("30.00");
+					}else if(nombrePlan.contains("ESTUDIANTE")) {
+						descuento = new BigDecimal("40.00");
+					}else if(nombrePlan.contains("MENSUALIDAD")) {
+						descuento = new BigDecimal("20.00");
+					}else {
+						descuento = BigDecimal.ZERO;
+					}
+					montoAPagar = montoAPagar.subtract(descuento);
+					System.out.println("⭐ Renovación Anticipada: Se aplicó descuento de Pronto Pago de $" + descuento);
+				} else {
+					System.out.println("ℹ️ Cobro normal: No aplica descuento de pronto pago.");
+				}
+			}else {
+				fechaInicioNueva = hoy;
+			}
+			
+			// 3. Calcular fecha de fin (Semanas, meses, años)
+			int dias = membresia.getDuracionDias();
+			if(dias == 7) {
+				fechaFinNueva = fechaInicioNueva.plusWeeks(1);
+			}else if(dias >= 28 && dias <= 31) {
+				fechaFinNueva = fechaInicioNueva.plusMonths(1);
+			}else if(dias >= 58 && dias <= 62) {
+				fechaFinNueva = fechaInicioNueva.plusMonths(2);
+			}else if(dias >= 360) {
+				fechaFinNueva = fechaInicioNueva.plusYears(1);
+			}else {
+				fechaFinNueva = fechaInicioNueva.plusDays(dias);
+			}
+			
+			// 4. Recargo de inscripción
+			if(aplicaInscripcion) {
+				montoAPagar = montoAPagar.add(new BigDecimal("100.00"));
+			}
+		}
+		
+		// ==========================================
+		// GUARDADO FINAL (Igual para ambos caminos)
+		// ==========================================
+		Suscripcion nueva = new Suscripcion();
+		nueva.setSocio(socio);
+		nueva.setMembresia(membresia);
+		nueva.setFechaInicio(fechaInicioNueva);
+		nueva.setFechaFin(fechaFinNueva);
+		nueva.setEstado("ACTIVA");
+		nueva.setMontoCobrado(montoAPagar);
+		
+		Suscripcion guardada = suscripcionRepository.save(nueva);
+		
+		Pago pago = new Pago();
+		pago.setSuscripcion(guardada);
+		pago.setSocio(socio);
+		pago.setMonto(montoAPagar);
+		pago.setFechaPago(LocalDateTime.now());
+		pago.setMetodoPago(metodoPagoFinal);
+		
+		try {
+			if(!esMigracion) {
+				gym_system.com.mx.entity.TurnoCaja turnoActual = turnoCajaService.getTurnoActivoDelUsuarioLogueado();
+				pago.setTurnoCaja(turnoActual);
+				
+				pago.setFormaPago(gym_system.com.mx.entity.FormaPago.valueOf(metodoPago.toUpperCase()));
+			}
+		} catch (Exception e) {
+			throw new RuntimeException("No se puede cobrar: " + e.getMessage());
+		}
+		
+		pagoRepository.save(pago);
+		return guardada;
+	}
+	
+	public Suscripcion actualizarSuscripcion(Integer id, Suscripcion suscripcionActualizada) {
+		return suscripcionRepository.findById(id).map(suscripcion ->{
+			suscripcion.setFechaInicio(suscripcionActualizada.getFechaInicio());
+			suscripcion.setFechaFin(suscripcionActualizada.getFechaFin());
+			suscripcion.setEstado(suscripcionActualizada.getEstado());
+			return suscripcionRepository.save(suscripcion);
+		}).orElseThrow(() -> new RuntimeException("Suscripcion no encontrada"));
+	}
+	
+	public void cancelarSuscripcion(Integer id) {
+		Suscripcion suscripcion = suscripcionRepository.findById(id)
+				.orElseThrow(() -> new RuntimeException("Suscripcion no encontrada"));
+		suscripcion.setEstado("CANCELADA");
+		
+		String usuarioLogueado = SecurityContextHolder.getContext().getAuthentication().getName();
+		suscripcion.setCanceladaPor(usuarioLogueado);
+		suscripcion.setFechaCancelacion(LocalDateTime.now());
+		
+		suscripcionRepository.save(suscripcion);
+		
+		System.out.println("⚠️ ALERTA: Suscripción " + id + " cancelada manualmente por el usuario: " + usuarioLogueado);
+	}
+}

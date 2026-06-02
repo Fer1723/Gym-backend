@@ -2,6 +2,7 @@ package gym_system.com.mx.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import org.hibernate.annotations.ManyToAny;
 
@@ -48,5 +49,11 @@ public class Suscripcion {
 	
 	@Column(name = "monto_cobrado")
 	private BigDecimal montoCobrado;
+	
+	@Column(name = "cancelada_por")
+	private String canceladaPor;
+	
+	@Column(name = "fecha_cancelacion")
+	private LocalDateTime fechaCancelacion;
 
 }

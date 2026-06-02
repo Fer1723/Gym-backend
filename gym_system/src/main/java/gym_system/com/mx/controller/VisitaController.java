@@ -1,5 +1,6 @@
 package gym_system.com.mx.controller;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.HashMap;
@@ -28,6 +29,10 @@ public class VisitaController {
 	@Autowired
 	private TurnoCajaService turnoCajaService;
 	
+	public static final String Pool_ALFANUMERICO = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+	public static final int LONGITUD_PIN = 5;
+	public final SecureRandom secureRandom = new SecureRandom();
+	
 	@PostMapping("/generar")
 	public ResponseEntity<?> generarVisita(@RequestParam Double monto, @RequestParam String metodoPago){
 		try {
@@ -40,24 +45,23 @@ public class VisitaController {
 			
 			v.setFechaCreacion(LocalDateTime.now());
 			v.setUsado(false);
-			v.setPin(String.format("%04d", new Random().nextInt(10000)));
+			// Generamos el PIN Blindado (Ejemplo: V-K7R9X)
+			v.setPin(generarPinAlfanumerico());
 			return ResponseEntity.ok(visitaRepository.save(v));
 		} catch (Exception e) {
 			return ResponseEntity.badRequest().body(Map.of("error", "Error en caja: " + e.getMessage()));
-		}
-		
-		
+		}	
 	}
 	
 	@GetMapping("/validar/{pin}")
 	public ResponseEntity<?> validadrAcceso(@PathVariable String pin){
-		return visitaRepository.findByPinAndUsadoFalse(pin)
+		return visitaRepository.findByPinAndUsadoFalse(pin.toUpperCase())
 				.map(v ->{
 					v.setUsado(true);
 					visitaRepository.save(v);
-					return ResponseEntity.ok("{\"acceso\": true, \"mensaje\": \"¡Bienvenido!\"}");
+					return ResponseEntity.ok("{\"acceso\": true, \"mensaje\": \"¡Visita Express Válida! Bienvenido\"}");
 				})
-				.orElse(ResponseEntity.status(403).body("{\"acceso\": false, \"mensaje\": \"PIN inválido o ya usado\"}"));
+				.orElse(ResponseEntity.status(403).body("{\"acceso\": false, \"mensaje\": \"Código de visita inválido o ya utilizado\"}"));
 	}
 	
 	@GetMapping("/stats/mes-actual")
@@ -78,4 +82,13 @@ public class VisitaController {
 
         return ResponseEntity.ok(stats);
     }
+	
+	private String generarPinAlfanumerico() {
+		StringBuilder sb = new StringBuilder("V-");
+		for(int i = 0; i < LONGITUD_PIN; i++) {
+			int index = secureRandom.nextInt(Pool_ALFANUMERICO.length());
+			sb.append(Pool_ALFANUMERICO.charAt(index));
+		}
+		return sb.toString();
+	}
 }
