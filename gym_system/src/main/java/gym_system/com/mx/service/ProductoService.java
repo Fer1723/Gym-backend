@@ -9,10 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import gym_system.com.mx.entity.Producto;
-import gym_system.com.mx.entity.Venta;
 import gym_system.com.mx.entity.VentaTienda;
 import gym_system.com.mx.repository.ProductoRepository;
-import gym_system.com.mx.repository.VentaRepository;
 import gym_system.com.mx.repository.VentaTiendaRepository;
 import jakarta.transaction.TransactionScoped;
 import jakarta.transaction.Transactional;
@@ -22,9 +20,6 @@ public class ProductoService {
 	
 	@Autowired
 	private ProductoRepository productoRepository;
-	
-	@Autowired
-	private VentaRepository ventaRepository;
 	
 	@Autowired
 	private VentaTiendaRepository ventaTiendaRepository;
@@ -40,45 +35,12 @@ public class ProductoService {
 		return productoRepository.buscarProductosCriticos();
 	}
 	
-	public List<Venta> obtenerVentas(){
-		return ventaRepository.findAll();
-	}
-	
 	public List<VentaTienda> obtenerHistorialVentas(){
 		return ventaTiendaRepository.findAll();
 	}
 	
 	public Producto guardarProducto(Producto producto) {
 		return productoRepository.save(producto);
-	}
-	
-	@Transactional
-	public void venderProducto(Integer idProducto, Integer cantidadVendida) {
-		Producto producto = productoRepository.findById(idProducto)
-				.orElseThrow(() -> new RuntimeException("Error: Producto no encontrado"));
-		
-		if (producto.getStockActual() < cantidadVendida) {
-			throw new RuntimeException("¡Stock insuficiente! Solo queda " + producto.getStockActual() + " unidades de " + producto.getNombre());
-		}
-		
-		producto.setStockActual(producto.getStockActual() - cantidadVendida);;
-		productoRepository.save(producto);
-		
-		Venta nuevaVenta = new Venta();
-		nuevaVenta.setNombreProducto(producto.getNombre());
-		nuevaVenta.setCantidad(cantidadVendida);
-		
-		BigDecimal totalCobrado = producto.getPrecioVenta().multiply(new BigDecimal(cantidadVendida));
-		nuevaVenta.setTotal(totalCobrado);
-		
-		try {
-			gym_system.com.mx.entity.TurnoCaja turnoActual = turnoCajaService.getTurnoActivoDelUsuarioLogueado();
-			nuevaVenta.setTurnoCaja(turnoActual);
-		} catch (Exception e) {
-			throw new RuntimeException("No se puede registrar la venta rápida: " + e.getMessage());
-		}
-	
-		ventaRepository.save(nuevaVenta);
 	}
 	
 	@Transactional

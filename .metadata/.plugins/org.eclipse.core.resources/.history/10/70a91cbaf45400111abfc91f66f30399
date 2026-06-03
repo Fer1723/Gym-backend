@@ -1,9 +1,0 @@
-package gym.system.com.mx.dto;
-
-public class RegistroRequestDTO {
-	private String username;
-	private String password;
-	private String rol;
-	private String llaveMaestra;
-
-}

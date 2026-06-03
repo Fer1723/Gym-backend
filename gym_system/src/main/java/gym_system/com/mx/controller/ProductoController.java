@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import gym_system.com.mx.entity.Producto;
-import gym_system.com.mx.entity.Venta;
 import gym_system.com.mx.entity.VentaTienda;
 import gym_system.com.mx.repository.MembresiaRepository;
 import gym_system.com.mx.service.ProductoService;
@@ -50,17 +49,6 @@ public class ProductoController {
 	@PostMapping
 	public Producto agregarProducto(@RequestBody Producto producto) {
 		return productoService.guardarProducto(producto);
-	}
-	
-	@PostMapping("/{id}/vender")
-	public ResponseEntity<?> procesarVentaRapida(@PathVariable Integer id, @RequestParam Integer cantidad){
-		try {
-			productoService.venderProducto(id, cantidad);
-			
-			return ResponseEntity.ok().body("{\"mensaje\": \"Venta registrada y stock actualizado con éxito.\"}");
-		} catch (RuntimeException e) {
-			return ResponseEntity.badRequest().body("{\"error\":\"" + e.getMessage() + "\"}");
-		}
 	}
 	
 	@PostMapping("/carrito")
